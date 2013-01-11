@@ -116,6 +116,7 @@ public class ColumnFamilyInputFormat extends InputFormat<ByteBuffer, SortedMap<B
         // cannonical ranges and nodes holding replicas
         List<TokenRange> masterRangeNodes = getRangeMap(conf);
 
+        masterRangeNodes = ConfigHelper.mapEndpoints(conf, masterRangeNodes);
         keyspace = ConfigHelper.getInputKeyspace(context.getConfiguration());
         cfName = ConfigHelper.getInputColumnFamily(context.getConfiguration());
         partitioner = ConfigHelper.getInputPartitioner(context.getConfiguration());

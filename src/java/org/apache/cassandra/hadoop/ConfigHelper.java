@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import org.apache.cassandra.io.compress.CompressionParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +78,7 @@ public class ConfigHelper
     private static final String OUTPUT_COMPRESSION_CHUNK_LENGTH = "cassandra.output.compression.length";
     private static final String INPUT_TRANSPORT_FACTORY_CLASS = "cassandra.input.transport.factory.class";
     private static final String OUTPUT_TRANSPORT_FACTORY_CLASS = "cassandra.output.transport.factory.class";
+    private static final String ENDPOINT_MAP_PREFIX = "cassandra.node.map.";
 
     private static final Logger logger = LoggerFactory.getLogger(ConfigHelper.class);
 
@@ -546,5 +549,39 @@ public class ConfigHelper
         {
             throw new RuntimeException("Failed to instantiate transport factory:" + factoryClassName, e);
         }
+    }
+
+    /**
+     * Set a mapping between endpoints returned by ring_describe and other (public) endpoints for debugging
+     *
+     * @param conf hadoop configuration
+     * @param endpointMap mapping between endpoints
+     */
+    public static void setEndpointMap(Configuration conf, Map<String, String> endpointMap) {
+        for (Map.Entry<String, String> entry : endpointMap.entrySet()) {
+            conf.set(ENDPOINT_MAP_PREFIX + entry.getKey(), entry.getValue());
+        }
+    }
+
+    /**
+     * Map the endpoints in the given token ranges to the endpoint settings in the Hadoop configuration.
+     *
+     * @param conf hadoop configuration
+     * @param tokenRanges token ranges to map using the hadoop configuration
+     * @return a copy of the token ranges with the mapped endpoints
+     */
+    public static List<TokenRange> mapEndpoints(final Configuration conf, List<TokenRange> tokenRanges) {
+        return Lists.transform(tokenRanges, new Function<TokenRange, TokenRange>() {
+            public TokenRange apply(TokenRange tokenRange) {
+                List<String> mappedEndpoints = Lists.transform(tokenRange.getEndpoints(), new Function<String, String>() {
+                    public String apply(String endpoint) {
+                        return conf.get(ENDPOINT_MAP_PREFIX + endpoint, endpoint);
+                    }
+                });
+                TokenRange copy = tokenRange.deepCopy();
+                copy.setEndpoints(mappedEndpoints);
+                return copy;
+            }
+        });
     }
 }

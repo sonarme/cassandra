@@ -66,6 +66,7 @@ public class RingCache
                 Cassandra.Client client = ConfigHelper.getClientFromOutputAddressList(conf);
 
                 List<TokenRange> ring = client.describe_ring(ConfigHelper.getOutputKeyspace(conf));
+                ring = ConfigHelper.mapEndpoints(conf, ring);
                 rangeMap = ArrayListMultimap.create();
 
                 for (TokenRange range : ring)
